@@ -23,7 +23,7 @@ jobs:
 
       # 3. Menginstal semua dependencies dari package.json
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       # 4. Mempublikasikan package ke NPM
       - name: Publish to NPM
