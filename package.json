@@ -1,6 +1,6 @@
 {
   "name": "safety-safe",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Sebuah package NPM untuk mendeteksi dan memfilter pesan bug/crash/spam pada bot WhatsApp (Baileys).",
   "main": "index.js",
   "type": "commonjs",
