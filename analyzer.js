@@ -1,84 +1,92 @@
-/**
- * Menganalisis objek pesan WhatsApp (dari Baileys) untuk mendeteksi potensi bug, spam, atau crash.
- * @param {import('@whiskeysockets/baileys').WAMessage['message']} message - Objek message dari pesan Baileys.
- * @returns {{isMalicious: boolean, reason: string|null}} - Objek hasil analisis.
- */
 function analyzeMessage(message) {
-  // Pastikan message tidak null atau undefined
   if (!message) {
     return { isMalicious: false, reason: null };
   }
 
-  // Aturan #1: Cek panjang teks/caption yang tidak wajar
-  const textLength = message.conversation?.length || message.extendedTextMessage?.text?.length || message.imageMessage?.caption?.length || message.videoMessage?.caption?.length || 0;
-  if (textLength > 20000) {
-    return { isMalicious: true, reason: 'Panjang teks/caption ekstrem' };
-  }
-
-  // Aturan #2: Cek jumlah mention yang gila dari berbagai tipe pesan
-  const contextInfo = message.extendedTextMessage?.contextInfo ||
-                      message.imageMessage?.contextInfo ||
-                      message.videoMessage?.contextInfo ||
-                      message.stickerMessage?.contextInfo ||
-                      message.interactiveMessage?.contextInfo;
-  const mentionCount = contextInfo?.mentionedJid?.length || 0;
-  if (mentionCount > 1000) {
-    return { isMalicious: true, reason: 'Jumlah mention masif' };
+  const fullText = message.conversation || message.extendedTextMessage?.text || message.imageMessage?.caption || message.videoMessage?.caption || '';
+  if (fullText.length > 25000) {
+    return { isMalicious: true, reason: 'Extreme text length' };
   }
   
-  // Aturan #3: Cek interactiveResponseMessage (Bug paramsJson)
-  const paramsJson = message.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson;
-  if (paramsJson && paramsJson.length > 10000) {
-      return { isMalicious: true, reason: 'Bug Interactive Response (paramsJson)' };
+  const invisibleCharRegex = /[\u200b-\u200f\u202a-\u202e\uFEFF]/g;
+  const invisibleCharCount = (fullText.match(invisibleCharRegex) || []).length;
+  if (invisibleCharCount > 5000 && fullText.length > 0 && (invisibleCharCount / fullText.length > 0.5)) {
+    return { isMalicious: true, reason: 'High density of invisible characters' };
   }
 
-  // Aturan #4: Cek listResponseMessage (Bug judul section)
-  const listSections = message.listResponseMessage?.sections;
-  if (listSections) {
-      const totalTitleLength = listSections.reduce((acc, section) => acc + (section.title?.length || 0), 0);
-      if (totalTitleLength > 50000) {
-          return { isMalicious: true, reason: 'Bug List Response (section title)' };
-      }
-  }
-
-  // Aturan #5: Cek carouselMessage (Bug teks di card)
-  const carouselCards = message.interactiveMessage?.carouselMessage?.cards;
-  if (carouselCards) {
-      for (const card of carouselCards) {
-          const headerLength = card.header?.title?.length || 0;
-          const bodyLength = card.body?.text?.length || 0;
-          if (headerLength > 10000 || bodyLength > 10000) {
-              return { isMalicious: true, reason: 'Bug Carousel (card text)' };
-          }
-      }
+  const contextInfo = message.stickerMessage?.contextInfo || message.imageMessage?.contextInfo || message.videoMessage?.contextInfo || 
+                      message.audioMessage?.contextInfo || message.documentMessage?.contextInfo || message.extendedTextMessage?.contextInfo ||
+                      message.interactiveMessage?.contextInfo || message.buttonsMessage?.contextInfo || message.listMessage?.contextInfo;
+  
+  const mediaMsg = message.documentMessage || message.videoMessage || message.imageMessage || message.audioMessage;
+  
+  if (contextInfo?.mentionedJid?.length > 1000) {
+    return { isMalicious: true, reason: 'Massive mention count' };
   }
   
-  // Aturan #6: Cek nilai properti media yang mustahil (contoh pada video/dokumen)
-  const mediaMsg = message.documentMessage || message.videoMessage || message.imageMessage;
+  if (message.protocolMessage?.type === 29 || message.protocolMessage?.type === 25) {
+    return { isMalicious: true, reason: 'Unusual Protocol Message type detected' };
+  }
+  
+  if (message.albumMessage?.messageList?.length > 50) {
+    return { isMalicious: true, reason: 'Forbidden: albumMessage with excessive items' };
+  }
+
   if (mediaMsg) {
     const duration = mediaMsg.seconds || 0;
     const fileLength = parseInt(mediaMsg.fileLength || '0', 10);
     const pageCount = mediaMsg.pageCount || 0;
-    // Jika durasi > 1 jam ATAU file > 2GB ATAU pageCount > 1jt -> tidak wajar
-    if (duration > 3600 || fileLength > 2000000000 || pageCount > 1000000) {
-        return { isMalicious: true, reason: 'Bug Media (nilai properti tidak wajar)' };
+    if (duration > 3600 || fileLength > 2000000000 || pageCount > 1000000 || duration > 9999999 || fileLength > 9999999999) {
+      return { isMalicious: true, reason: 'Bug: Media with unreasonable properties' };
     }
   }
 
-  // Aturan #7: Cek bug pairing code palsu
-  const pairingResult = message.nativeFlowResponseMessage?.resultado;
-  if (pairingResult && typeof pairingResult === 'string') {
+  if (mediaMsg?.externalAdReply) {
+    const titleLength = mediaMsg.externalAdReply.title?.length || 0;
+    const bodyLength = mediaMsg.externalAdReply.body?.length || 0;
+    if (titleLength > 5000 || bodyLength > 5000) {
+      return { isMalicious: true, reason: 'Bug: externalAdReply with oversized text' };
+    }
+  }
+
+  if (message.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson?.length > 10000) {
+    return { isMalicious: true, reason: 'Bug: Interactive Response with oversized paramsJson' };
+  }
+
+  if (message.videoMessage?.annotations) {
+    for (const annotation of message.videoMessage.annotations) {
+      const authorLength = annotation.embeddedContent?.embeddedMusic?.author?.length || 0;
+      if (authorLength > 5000) {
+        return { isMalicious: true, reason: 'Bug: Video Annotations' };
+      }
+    }
+  }
+
+  const listMessageSections = message.listResponseMessage?.sections || message.listMessage?.sections;
+  if (listMessageSections?.[0]?.rows?.length > 1000) {
+    return { isMalicious: true, reason: 'Bug: List message with excessive rows' };
+  }
+  const buttonCount = message.buttonsMessage?.buttons?.length || message.interactiveMessage?.nativeFlowMessage?.buttons?.length || 0;
+  if (buttonCount > 100) {
+      return { isMalicious: true, reason: 'Bug: Message with excessive buttons'};
+  }
+  
+  if (message.locationMessage?.comment?.length > 5000 || 
+      message.contactMessage?.displayName?.length > 5000 ||
+      message.liveLocationMessage?.sequenceNumber > 999999999 ||
+      message.productMessage?.product?.productImageCount > 100 ||
+      message.orderMessage?.itemCount > 1000) {
+    return { isMalicious: true, reason: 'Bug: Payload with abnormal specific properties' };
+  }
+  
+  if (message.nativeFlowResponseMessage?.resultado) {
     try {
-        const parsed = JSON.parse(pairingResult);
-        if (parsed?.ws?.config?.waWebSocketUrl) {
-            return { isMalicious: true, reason: 'Bug Pairing Code Palsu' };
-        }
-    } catch (e) {
-        // Abaikan jika JSON tidak valid
-    }
+      if (JSON.parse(message.nativeFlowResponseMessage.resultado)?.ws?.config?.waWebSocketUrl) {
+        return { isMalicious: true, reason: 'Bug: Fake Pairing Code' };
+      }
+    } catch (e) { }
   }
 
-  // Jika lolos semua, pesan dianggap aman
   return { isMalicious: false, reason: null };
 }
 
