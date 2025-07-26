@@ -1,7 +1,5 @@
-# Nama workflow yang akan muncul di tab "Actions" GitHub
 name: Publish to NPM
 
-# Trigger: Workflow ini hanya akan berjalan saat ada "Release" baru dibuat
 on:
   release:
     types: [created]
@@ -9,25 +7,31 @@ on:
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest
+
     steps:
-      # 1. Mengambil kode dari repository Anda
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Menyiapkan lingkungan Node.js
-      - name: Setup Node.js
+      - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20' # Menggunakan Node.js versi 20 (LTS)
+          node-version: '20'
           registry-url: 'https://registry.npmjs.org'
 
-      # 3. Menginstal semua dependencies dari package.json
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
-      # 4. Mempublikasikan package ke NPM
+      - name: Lint source code
+        run: npm run lint
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build project
+        run: npm run build
+
       - name: Publish to NPM
         run: npm publish
         env:
-          # Menggunakan token yang kita simpan di GitHub Secrets
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_ENV: production
