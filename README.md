@@ -34,15 +34,15 @@
 ## 📦 Installation
 
 ```bash
-npm install whatsapp-message-analyzer
+npm install safety-safe
 ```
 
 ```bash
-yarn add whatsapp-message-analyzer
+yarn add safety-safe
 ```
 
 ```bash
-pnpm add whatsapp-message-analyzer
+pnpm add safety-safe
 ```
 
 ## 🛡️ Security Features
@@ -64,7 +64,7 @@ pnpm add whatsapp-message-analyzer
 ### ESM (ES Modules)
 
 ```typescript
-import { analyzeMessage } from 'whatsapp-message-analyzer';
+import { analyzeMessage } from 'safety-safe';
 
 const message = {
   conversation: "Hello, this is a normal message"
@@ -77,7 +77,7 @@ console.log(result); // { isMalicious: false, reason: null }
 ### CommonJS
 
 ```javascript
-const { analyzeMessage } = require('whatsapp-message-analyzer');
+const { analyzeMessage } = require('safety-safe');
 
 const suspiciousMessage = {
   conversation: "A".repeat(30000) // Extremely long text
@@ -90,7 +90,7 @@ console.log(result); // { isMalicious: true, reason: "Extreme text length" }
 ### With Custom Configuration
 
 ```typescript
-import { analyzeMessage, type AnalysisOptions } from 'whatsapp-message-analyzer';
+import { analyzeMessage, type AnalysisOptions } from 'safety-safe';
 
 const options: AnalysisOptions = {
   maxTextLength: 10000,
@@ -280,7 +280,7 @@ const result = analyzeMessage(message, strictOptions);
 
 ```typescript
 import express from 'express';
-import { analyzeMessage } from 'whatsapp-message-analyzer';
+import { analyzeMessage } from 'safety-safe';
 
 const app = express();
 app.use(express.json());
@@ -318,8 +318,8 @@ app.post('/webhook/whatsapp', (req, res) => {
 ### Setup
 
 ```bash
-git clone https://github.com/yourusername/whatsapp-message-analyzer.git
-cd whatsapp-message-analyzer
+git clone https://github.com/joo-devweb/safety-safe.git
+cd safety-safe
 npm install
 ```
 
