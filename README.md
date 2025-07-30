@@ -376,7 +376,7 @@ See [CHANGELOG.md](CHANGELOG.md) for a detailed history of changes.
 
 ### Reporting Vulnerabilities
 
-If you discover a security vulnerability, please send an email to [security@yourdomain.com](mailto:security@yourdomain.com). All security vulnerabilities will be promptly addressed.
+If you discover a security vulnerability, please send an email to [security@yourdomain.com](mailto:security@jo.com). All security vulnerabilities will be promptly addressed.
 
 ### Security Features
 
